@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>GameStore — Digital Games (Prototype)</title>
+  <meta name="description" content="GameStore — instant digital game downloads. Pay with UPI.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🎮</text></svg>">
+  <style>
+    /* Minimal styles moved inline for static deploy */
+    :root{--bg:#0b0f14;--card:#0f1720;--muted:#93a3b4;--accent:#ff5c7c;--glass:rgba(255,255,255,0.03);--radius:14px;--maxw:1100px;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial}
+    *{box-sizing:border-box}html,body{height:100%}body{margin:0;background:linear-gradient(180deg,#05070a 0%, #0b0f14 100%);color:#e6eef6;line-height:1.4}
+    .container{max-width:var(--maxw);margin:0 auto;padding:20px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0}.brand{display:flex;align-items:center;gap:12px}.logo{width:46px;height:46px;background:linear-gradient(135deg,#2b2f8b,var(--accent));display:grid;place-items:center;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,0.6)}.logo span{font-size:20px}nav a{color:var(--muted);text-decoration:none;margin-right:14px}.cta{background:var(--accent);border:none;padding:8px 12px;border-radius:10px;color:white;font-weight:600;cursor:pointer}
+    .hero{display:grid;grid-template-columns:1fr 360px;gap:18px;align-items:center;margin:22px 0}.hero .lead{background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);padding:28px;border-radius:18px}h1{margin:0;font-size:28px}.muted{color:var(--muted)}
+    .grid{display:grid;grid-template-columns:260px 1fr;gap:18px}.filters{background:var(--card);padding:14px;border-radius:12px}.product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+    .card{background:var(--glass);padding:10px;border-radius:12px;backdrop-filter:blur(6px);display:flex;flex-direction:column}.cover{position:relative;border-radius:8px;overflow:hidden;height:220px;background:#081018}.cover img{width:100%;height:100%;object-fit:cover;display:block}.price{font-weight:700;margin-top:10px}.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.tag{background:rgba(255,255,255,0.03);padding:4px 8px;border-radius:8px;color:var(--muted);font-size:12px}.card .actions{margin-top:auto;display:flex;gap:8px}button.icon{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px;border-radius:10px;color:var(--muted);cursor:pointer}
+    .cart-summary{background:var(--card);padding:12px;border-radius:12px}footer{margin:28px 0 60px;color:var(--muted)}
+    .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,11,0.6);z-index:80}.modal.active{display:flex}.modal .panel{background:#07101a;padding:20px;border-radius:12px;width:420px}
+    @media (max-width:900px){.hero{grid-template-columns:1fr}.grid{grid-template-columns:1fr}.filters{order:2}.hero .right{order:1}}@media (max-width:520px){.cover{height:160px}.logo{width:40px;height:40px}.hero .right{padding:12px}.modal .panel{width:92%}}
+    :focus{outline:2px solid rgba(255,255,255,0.06);outline-offset:2px}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden="true"><span>🎮</span></div>
+        <div>
+          <div style="font-weight:700">GameStore</div>
+          <div class="muted" style="font-size:12px">Instant Downloads • Pay with UPI • Prices in ₹</div>
+        </div>
+      </div>
+      <nav aria-label="Main navigation">
+        <a href="#/">Home</a>
+        <a href="#/about">About</a>
+        <a href="#/cart">Cart (<span id="cart-count">0</span>)</a>
+        <button class="cta" id="loginBtn">Sign In</button>
+      </nav>
+    </header>
+    <main id="app"></main>
+    <footer>
+      <div class="muted">© 2025 GameStore. Prototype for university project.</div>
+    </footer>
+  </div>
+
+  <div class="modal" id="modal-login" aria-hidden="true">
+    <div class="panel" role="dialog" aria-modal="true" aria-labelledby="login-title">
+      <h3 id="login-title">Sign In / Sign Up</h3>
+      <p class="muted">Client-side demo login — stores name locally.</p>
+      <label class="muted">Email<input id="login-email" type="email" placeholder="you@example.com" style="width:100%;margin-top:6px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit"></label>
+      <label class="muted" style="display:block;margin-top:8px">Name<input id="login-name" placeholder="Your name" style="width:100%;margin-top:6px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit"></label>
+      <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+        <button class="icon" id="loginCancel">Cancel</button>
+        <button class="cta" id="loginSubmit">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Sample product data (frontend will fetch from backend if available)
+    const DEFAULT_PRODUCTS = [
+      {"id":1,"title":"RacerX: Neon Nights","price":499,"genre":"Racing","tags":["Singleplayer","Arcade"],"rating":4.5,"cover":"https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=800&auto=format&fit=crop&ixlib=rb-4.0.3&s=aa6e5bd9c3c7b1f3e8a6e2fb3f13a6b8"},
+      {"id":2,"title":"CyberQuest: Origins","price":799,"genre":"Action","tags":["Multiplayer","Sci-Fi"],"rating":4.7,"cover":"https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=800&auto=format&fit=crop&ixlib=rb-4.0.3&s=0e3a7c0b6f3b2e9b7c4a4d9b2a3a6c6c"}
+    ];
+
+    // Try fetching products from backend; fallback to DEFAULT_PRODUCTS
+    async function fetchProducts(){
+      try{
+        const res = await fetch('/api/products');
+        if(res.ok){ return await res.json(); }
+      }catch(e){}
+      return DEFAULT_PRODUCTS;
+    }
+
+    // Basic cart and render logic (kept small — same as earlier prototype but fetches products)
+    const CART_KEY = 'gamestore_cart_v1';
+    function loadCart(){try{return JSON.parse(localStorage.getItem(CART_KEY))||{items:[]}}catch(e){return {items:[]}}}
+    function saveCart(cart){localStorage.setItem(CART_KEY,JSON.stringify(cart));updateCartCount();}
+    function updateCartCount(){const c=loadCart();const count=c.items.reduce((s,i)=>s+i.qty,0);document.getElementById('cart-count').textContent=count}
+
+    let PRODUCTS = [];
+
+    async function route(){
+      const hash = location.hash.replace('#','')||'/';
+      if(hash==='/'||hash==='') await renderHome();
+      else if(hash.startsWith('/product/')) renderProduct(hash.split('/')[2]);
+      else if(hash==='/cart') renderCart();
+      else if(hash==='/checkout') renderCheckout();
+      else if(hash==='/success') renderSuccess();
+      else if(hash==='/about') renderAbout();
+      else await renderHome();
+    }
+
+    window.addEventListener('hashchange',route);
+    window.addEventListener('load',async ()=>{PRODUCTS = await fetchProducts();updateCartCount();route();});
+
+    function money(x){return '₹'+x.toFixed(0)}
+
+    function addToCart(id,qty=1){const cart=loadCart();const existing=cart.items.find(i=>i.id==id);const p=PRODUCTS.find(pp=>pp.id==id);if(!p)return; if(existing) existing.qty+=qty; else cart.items.push({id:p.id,qty,price:p.price,title:p.title,cover:p.cover}); saveCart(cart); alert('Added to cart')}
+
+    async function renderHome(){
+      document.title='GameStore — Home';
+      const app = document.getElementById('app');
+      app.innerHTML = `<section class="hero">
+          <div class="lead">
+            <h1>Discover top digital games — instant download</h1>
+            <p class="muted">UPI payments • Instant download after successful purchase • Best prices in ₹</p>
+            <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+              <a href="#/" class="cta">Shop Now</a>
+              <a class="button-like" href="#/about">Learn more</a>
+            </div>
+            <div style="margin-top:16px;display:flex;gap:8px">
+              <input id="search" placeholder="Search games, genres, tags..." style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit">
+              <select id="sort" style="padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit">
+                <option value="popular">Sort: Popular</option>
+                <option value="price_asc">Price: Low → High</option>
+                <option value="price_desc">Price: High → Low</option>
+                <option value="rating">Top Rated</option>
+              </select>
+            </div>
+          </div>
+          <aside class="right">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div><div style="font-weight:700">Cart Summary</div><div class="muted" style="font-size:13px">Items in cart: <span id="cart-items-count">0</span></div></div>
+              <div><button class="cta" onclick="location.hash='#/cart'">Go to Cart</button></div>
+            </div>
+            <div style="margin-top:12px" class="cart-summary" id="mini-cart"></div>
+          </aside>
+        </section>
+        <div class="grid"><div class="filters"><h4 style="margin:0 0 8px 0">Filters</h4></div><div><h3 style="margin-top:0">All Games</h3><div id="product-list" class="product-grid"></div></div></div>`;
+      renderProducts();
+    }
+
+    function renderProducts(){
+      const grid = document.getElementById('product-list');
+      grid.innerHTML = (PRODUCTS||[]).map(p=>`<div class="card"><a href="#/product/${p.id}" style="text-decoration:none;color:inherit"><div class="cover"><img src="${p.cover}" alt="${p.title} cover"></div></a><div style="margin-top:8px"><div style="font-weight:700">${p.title}</div><div class="muted" style="font-size:13px">${p.genre} • ${p.rating}★</div><div class="price">${money(p.price)}</div><div class="tags">${(p.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div><div class="actions" style="margin-top:10px"><button class="cta" onclick="addToCart(${p.id})">Add to Cart</button><a class="button-like" href="#/product/${p.id}">Details</a></div></div></div>`).join('');
+      document.getElementById('cart-items-count').textContent = loadCart().items.reduce((s,i)=>s+i.qty,0);
+    }
+
+    function renderProduct(id){
+      const prod = PRODUCTS.find(p=>p.id==id)||{};
+      document.getElementById('app').innerHTML = `<div style="display:flex;gap:18px;flex-wrap:wrap"><div style="flex:1;min-width:260px"><div class="card"><div class="cover"><img src="${prod.cover}" alt="${prod.title} cover"></div><h2 style="margin:10px 0 0 0">${prod.title}</h2><div class="muted">Genre: ${prod.genre} • Rating: ${prod.rating}</div><div class="price">${money(prod.price)}</div><div class="tags">${(prod.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div><div style="margin-top:12px;display:flex;gap:8px"><button class="cta" onclick="addToCart(${prod.id})">Add to Cart</button><a class="button-like" href="#/checkout" onclick="addToCart(${prod.id})">Buy Now</a></div></div></div><div style="flex:1;min-width:220px"><div class="card"><h4>Description</h4><p class="muted">This is a fictional game used for demo. In production include system requirements and secure download process.</p></div></div></div>`;
+    }
+
+    function renderCart(){
+      const cart = loadCart();
+      document.getElementById('app').innerHTML = `<h2>Your Cart</h2><div style="display:grid;grid-template-columns:1fr 320px;gap:14px"><div><div id="cart-items"></div></div><aside class="cart-summary"><h4>Order Summary</h4><div class="muted">Items: <span id="summary-count">0</span></div><div style="margin-top:8px;font-weight:700">Total: <span id="summary-total">₹0</span></div><div style="margin-top:12px"><button class="cta" onclick="location.hash='#/checkout'">Proceed to Checkout</button></div></aside></div>`;
+      const el = document.getElementById('cart-items');
+      if(!cart.items.length){el.innerHTML='<p class="muted">Your cart is empty.</p>';document.getElementById('summary-count').textContent=0;document.getElementById('summary-total').textContent='₹0';return}
+      el.innerHTML = cart.items.map(it=>`<div class="card" style="display:flex;gap:12px;align-items:center;margin-bottom:8px"><img src="${it.cover}" alt="${it.title}" style="width:84px;height:64px;object-fit:cover;border-radius:8px"><div style="flex:1"><div style="font-weight:700">${it.title}</div><div class="muted">Price: ${money(it.price)} • Qty: ${it.qty}</div></div><div style="text-align:right"><div style="font-weight:700">${money(it.price * it.qty)}</div></div></div>`).join('');
+      document.getElementById('summary-count').textContent = cart.items.reduce((s,i)=>s+i.qty,0);
+      document.getElementById('summary-total').textContent = '₹'+cart.items.reduce((s,i)=>s+i.qty*i.price,0);
+    }
+
+    async function renderCheckout(){
+      const cart = loadCart();
+      if(!cart.items.length){location.hash='#/cart';return}
+      const total = cart.items.reduce((s,i)=>s+i.qty*i.price,0);
+      document.getElementById('app').innerHTML = `<h2>Checkout</h2><div style="display:grid;grid-template-columns:1fr 320px;gap:12px"><div><div class="card"><h4>Billing & Payment</h4><label class="muted">Payer Name<input id="payer" placeholder="Full name" style="width:100%;margin-top:6px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit"></label><label class="muted" style="display:block;margin-top:8px">Email<input id="payer-email" placeholder="you@example.com" style="width:100%;margin-top:6px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit"></label><div style="margin-top:12px"><div class="muted">Choose payment (demo)</div><div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="icon" onclick="payWithUPI()">UPI (Mock)</button><button class="icon" onclick="mockCardPayment()">Card (Mock)</button></div></div></div><div style="margin-top:12px" class="card"><h4>Order Items</h4>${cart.items.map(it=>`<div style="display:flex;gap:12px;align-items:center;margin-bottom:8px"><img src="${it.cover}" style="width:64px;height:48px;object-fit:cover;border-radius:6px"><div style="flex:1"><div style="font-weight:700">${it.title}</div><div class="muted">Qty: ${it.qty} • ${money(it.price)}</div></div><div style="font-weight:700">${money(it.price * it.qty)}</div></div>`).join('')}</div></div><aside class="cart-summary"><div style="font-weight:700">Total to pay</div><div style="font-size:13px" class="muted">Items: ${cart.items.length}</div><div style="margin-top:12px;font-size:18px;font-weight:800">${money(total)}</div><div style="margin-top:12px"><button class="cta" onclick="payWithUPI()">Pay with UPI</button></div><div class="muted" style="margin-top:8px;font-size:12px">This is a demo. For production integrate a gateway and server webhooks.</div></aside></div>`;
+    }
+
+    function renderSuccess(){
+      const cart = loadCart(); const total = cart.items.reduce((s,i)=>s+i.qty*i.price,0);
+      document.getElementById('app').innerHTML = `<div class="card"><h2>Payment Successful</h2><p class="muted">Thank you for your purchase! (Demo)</p><div style="margin-top:12px"><h4>Your downloads</h4><ul>${cart.items.map(i=>`<li>${i.title} — <a href="#/download-${i.id}" onclick="alert('Demo download. Implement server-side signed URLs for real downloads.')">Download</a></li>`).join('')}</ul></div><div style="margin-top:12px">Order total: <strong>${money(total)}</strong></div><div style="margin-top:12px"><a class="cta" href="#/">Back to store</a></div></div>`;
+      localStorage.setItem('gamestore_cart_v1',JSON.stringify({items:[]}));
+      updateCartCount();
+    }
+
+    function renderAbout(){document.getElementById('app').innerHTML = `<div class="card"><h2>About GameStore</h2><p class="muted">Prototype e-commerce store for digital games. Built as a demo. Replace with your company info and policies.</p></div>`;}
+
+    function payWithUPI(){ const upi = prompt('Enter UPI ID (demo)'); if(!upi) return alert('Payment cancelled'); setTimeout(()=>{location.hash='#/success'},800); }
+    function mockCardPayment(){ alert('Demo card flow — integrate gateway for production') }
+
+    // login modal handlers
+    document.getElementById('loginBtn').addEventListener('click',()=>{document.getElementById('modal-login').classList.add('active');document.getElementById('modal-login').setAttribute('aria-hidden','false')});
+    document.getElementById('loginCancel').addEventListener('click',()=>{document.getElementById('modal-login').classList.remove('active');document.getElementById('modal-login').setAttribute('aria-hidden','true')});
+    document.getElementById('loginSubmit').addEventListener('click',()=>{const name=document.getElementById('login-name').value||'';const email=document.getElementById('login-email').value||'';localStorage.setItem('gamestore_user_v1',JSON.stringify({name,email}));document.getElementById('modal-login').classList.remove('active');document.getElementById('modal-login').setAttribute('aria-hidden','true');alert('Saved')});
+
+    // route load
+    window.addEventListener('hashchange',route);
+    window.addEventListener('load',route);
+  </script>
+</body>
+</html>
